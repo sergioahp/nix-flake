@@ -24,9 +24,9 @@
     #   flake = false;
     # };
 
-    # The Rust source for xremap
+    # The Rust source for xremap (using sergio's fork with hyprland lock integration)
     xremap = {
-      url = "github:k0kubun/xremap?ref=v0.14.1";
+      url = "github:sergioahp/xremap?ref=feature/hyprland-lock-integration";
       flake = false;
     };
     hyprland = {

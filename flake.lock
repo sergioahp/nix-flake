@@ -606,16 +606,16 @@
     "xremap": {
       "flake": false,
       "locked": {
-        "lastModified": 1758860852,
-        "narHash": "sha256-80Fzf5hnRBWx0NxV1z8majc7JbDNj0DZSRNkbPvI7Ck=",
-        "owner": "k0kubun",
+        "lastModified": 1762295885,
+        "narHash": "sha256-svFu+cH6UOnUd65TYhfAbxLKggku75RFhJ3bpEjVKNk=",
+        "owner": "sergioahp",
         "repo": "xremap",
-        "rev": "05b66b23b8e16ca8d4a143259c8f303c10e3cb70",
+        "rev": "6305a2184803e263bf9c1aeda507fb2e52002632",
         "type": "github"
       },
       "original": {
-        "owner": "k0kubun",
-        "ref": "v0.14.1",
+        "owner": "sergioahp",
+        "ref": "feature/hyprland-lock-integration",
         "repo": "xremap",
         "type": "github"
       }
