@@ -2,23 +2,28 @@
   Tests setting the debug value and that it properly merges with hand-set variables.
 */
 { self, ... }:
-{
+{ testers }:
+testers.runNixOSTest {
   name = "xremap-debug";
   nodes.machine1 =
-    { config, ... }:
+    { ... }:
     {
       services.getty.autologinUser = "root";
       imports = [
         self.nixosModules.default
+        ../common/no-network-in-tests.nix
         {
-          services.xremap.config.keymap = [
-            {
-              name = "Other remap";
-              remap = {
-                "z" = "q";
-              };
-            }
-          ];
+          services.xremap = {
+            enable = true;
+            config.keymap = [
+              {
+                name = "Other remap";
+                remap = {
+                  "z" = "q";
+                };
+              }
+            ];
+          };
         }
         { services.xremap.debug = true; }
         { systemd.services.xremap.serviceConfig.Environment = [ "FOO=BAR" ]; } # This should get merged.

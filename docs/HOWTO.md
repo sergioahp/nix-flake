@@ -1,101 +1,209 @@
 # Installation
 
-The installation depends on whether you are using [NixOS](#nixos) or [home-manager](#non-nixos-and-home-manager).
+The installation depends on whether you are using [NixOS](#nixos) or
+[home-manager](#non-nixos-and-home-manager).
 
 Regardless of the chosen approach, the installation consists of:
 
 1. Importing this flake's module
 2. Configuring xremap
 
-Note that flakes are required. If there is a demand for non-flake-based modules -- please feel free to submit an issue.
+Note that flakes are required. If there is a demand for non-flake-based modules
+– please feel free to submit an issue.
+
+## Runnable demos
+
+The flake comes with a set of self-contained NixOS configurations that can be
+run directly:
+
+<!-- `$ nix flake show --json ../.dev 2>/dev/null | jq -r '.nixosConfigurations | keys | map("nix run github:xremap/nix-flake?dir=.dev#"+.)| .[]'` -->
+
+```
+nix run github:xremap/nix-flake?dir=.dev#demo-gnome-user
+nix run github:xremap/nix-flake?dir=.dev#demo-kde-user
+nix run github:xremap/nix-flake?dir=.dev#demo-niri-user
+nix run github:xremap/nix-flake?dir=.dev#demo-wlroots-hyprland
+nix run github:xremap/nix-flake?dir=.dev#demo-wlroots-sway-user
+nix run github:xremap/nix-flake?dir=.dev#demo-x11-system
+nix run github:xremap/nix-flake?dir=.dev#demo-x11-user
+```
 
 ## NixOS
 
-There are two main ways of running xremap -- as a system service or as a user service. Not all combinations of mode x desktop environment are supported:
+There are two main ways of running xremap -- as a system service or as a user
+service. Not all combinations of mode x desktop environment are supported:
 
-| - | - | - | - | - | - | - |
-| System | :heavy_check_mark: | :heavy_multiplication_x: | :heavy_multiplication_x: | :heavy_check_mark: | :heavy_multiplication_x: | :question: |
-| User   | :heavy_check_mark: | :heavy_check_mark: |  :heavy_check_mark:       | :question: | :heavy_check_mark:           | :heavy_check_mark: |
+<!-- `> cat ./compatibility-matrix.md` -->
 
-For all examples in this section you can copy the code into a random `flake.nix` on your machine and run it in a VM as `nix run <path_to_flake>#nixosConfigurations.nixos.config.system.build.vm`.
+<!-- BEGIN mdsh -->
+| Mode     | No features        | KDE                      | Gnome                    | X11                | Wlroots                  | Niri               | Cosmic     |
+| -------- | ------------------ | ------------------------ | ------------------------ | ------------------ | ------------------------ | ------------------ | ---------- |
+| System   | :heavy_check_mark: | :heavy_multiplication_x: | :heavy_multiplication_x: | :heavy_check_mark: | :heavy_multiplication_x: | :question:         | :question: |
+| User     | :heavy_check_mark: | :heavy_check_mark:       | :heavy_check_mark:       | :heavy_check_mark: | :heavy_check_mark:       | :heavy_check_mark: | :question: |
+
+- :heavy_check_mark: – tested, works
+- :heavy_multiplication_x: – not implemented
+- :question: – implemented, not tested
+<!-- END mdsh -->
+
+For all examples in this section you can copy the code into a random `flake.nix`
+on your machine and run it in a VM as
+`nix run <path_to_flake>#nixosConfigurations.nixos.config.system.build.vm`.
 
 <details>
  <summary>
-  
-  ## System module, no desktop environment
-  </summary>
 
-  A very simple configuration that globally maps CapsLock to Escape and Ctrl+U to Page Up can look like this:
-  
-  ```nix
-  # flake.nix
-  {
-    inputs.xremap-flake.url = "github:xremap/nix-flake";
-    outputs = inputs@{ nixpkgs, ... }: {
-      nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-        modules = [
-          inputs.xremap-flake.nixosModules.default
-          /* This is effectively an inline module */
-          {
-            users.users.root.password = "hunter2";
-            system.stateVersion = "24.05";
-  
-            # Modmap for single key rebinds
-            services.xremap.config.modmap = [
-              {
-                name = "Global";
-                remap = { "CapsLock" = "Esc"; }; # globally remap CapsLock to Esc
-              }
-            ];
-  
-            # Keymap for key combo rebinds
-            services.xremap.config.keymap = [
-              {
-                name = "Example ctrl-u > pageup rebind";
-                remap = { "C-u" = "PAGEUP"; };
-                # NOTE: no application-specific remaps work without features (see configuration)
-              }
-            ];
-          }
-        ];
-      };
+## System module, no desktop environment
+
+</summary>
+
+A very simple configuration that globally maps CapsLock to Escape and Ctrl+U to
+Page Up can look like this:
+
+```nix
+# flake.nix
+{
+  inputs.xremap-flake.url = "github:xremap/nix-flake";
+  outputs = inputs@{ nixpkgs, ... }: {
+    nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        inputs.xremap-flake.nixosModules.default
+        /* This is effectively an inline module */
+        {
+          users.users.root.password = "hunter2";
+          system.stateVersion = "24.05";
+
+          services.xremap.enable = true;
+
+          # Modmap for single key rebinds
+          services.xremap.config.modmap = [
+            {
+              name = "Global";
+              remap = { "CapsLock" = "Esc"; }; # globally remap CapsLock to Esc
+            }
+          ];
+
+          # Keymap for key combo rebinds
+          services.xremap.config.keymap = [
+            {
+              name = "Example ctrl-u > pageup rebind";
+              remap = { "C-u" = "PAGEUP"; };
+              # NOTE: no application-specific remaps work without features (see configuration)
+            }
+          ];
+        }
+      ];
     };
-  }
-  ```
-</details>
+  };
+}
+```
 
+</details>
 
 <details>
   <summary>
-   
-   ## User module
-   </summary>
 
-  ```nix
-  # flake.nix
-  {
-    inputs.xremap-flake.url = "github:xremap/nix-flake";
-    outputs = inputs@{ nixpkgs, ... }: {
-      nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-        modules = [
-          inputs.xremap-flake.nixosModules.default
-          /* This is effectively an inline module */
+## User module
+
+</summary>
+
+```nix
+# flake.nix
+{
+  inputs.xremap-flake.url = "github:xremap/nix-flake";
+  outputs = inputs@{ nixpkgs, ... }: {
+    nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        inputs.xremap-flake.nixosModules.default
+        /* This is effectively an inline module */
+        {
+          users.users.root.password = "hunter2";
+          users.users.alice = {
+            password = "hunter2";
+            isNormalUser = true;
+          };
+
+          system.stateVersion = "24.05";
+          # This configures the service to only run for a specific user
+          services.xremap = {
+            enable = true;
+            /* NOTE: since this sample configuration does not have any DE, xremap needs to be started manually by systemctl --user start xremap */
+            serviceMode = "user";
+            userName = "alice";
+          };
+          # Modmap for single key rebinds
+          services.xremap.config.modmap = [
+            {
+              name = "Global";
+              remap = { "CapsLock" = "Esc"; }; # globally remap CapsLock to Esc
+            }
+          ];
+
+          # Keymap for key combo rebinds
+          services.xremap.config.keymap = [
+            {
+              name = "Example ctrl-u > pageup rebind";
+              remap = { "C-u" = "PAGEUP"; };
+            }
+          ];
+        }
+      ];
+    };
+  };
+}
+```
+
+</details>
+
+<details>
+  <summary>
+
+## Systemwide example with X feature for application-specific remaps
+
+</summary>
+
+```nix
+# flake.nix
+{
+  inputs.xremap-flake.url = "github:xremap/nix-flake";
+  outputs = inputs@{ nixpkgs, ... }: {
+    nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        inputs.xremap-flake.nixosModules.default
+        /* This is effectively an inline module */
+        (
+          { pkgs, ... }:
           {
             users.users.root.password = "hunter2";
             users.users.alice = {
               password = "hunter2";
               isNormalUser = true;
+              extraGroups = [ "wheel" ];
             };
-  
+
             system.stateVersion = "24.05";
-            # This configures the service to only run for a specific user
-            services.xremap = {
-              /* NOTE: since this sample configuration does not have any DE, xremap needs to be started manually by systemctl --user start xremap */
-              serviceMode = "user";
-              userName = "alice";
+
+            services.xserver = {
+              enable = true;
+              desktopManager.xfce.enable = true; # xfce is just an example
             };
+            environment.systemPackages = [ pkgs.kitty ];
+
+            /* Run a single one-shot service that allows root's services to access user's X session */
+            systemd.user.services.set-xhost = {
+              description = "Run a one-shot command upon user login";
+              path = [ pkgs.xorg.xhost ];
+              wantedBy = [ "default.target" ];
+              script = "xhost +SI:localuser:root";
+              environment.DISPLAY = ":0.0"; # NOTE: This is hardcoded for this flake
+            };
+
+            /* Enable X11 feature support */
+            services.xremap.withX11 = true;
+            services.xremap.enable = true;
             # Modmap for single key rebinds
             services.xremap.config.modmap = [
               {
@@ -103,184 +211,132 @@ For all examples in this section you can copy the code into a random `flake.nix`
                 remap = { "CapsLock" = "Esc"; }; # globally remap CapsLock to Esc
               }
             ];
-  
+
             # Keymap for key combo rebinds
             services.xremap.config.keymap = [
               {
-                name = "Example ctrl-u > pageup rebind";
+                name = "Example ctrl-u > pageup rebind, only for specific application";
                 remap = { "C-u" = "PAGEUP"; };
+                application.only = [ "kitty" ];
               }
             ];
           }
-        ];
-      };
+        )
+      ];
     };
-  }
-  ```
-</details>
+  };
+}
+```
 
-<details>
-  <summary>
-   
-  ## Systemwide example with X feature for application-specific remaps 
-  </summary>
-
-  ```nix
-  # flake.nix
-  {
-    inputs.xremap-flake.url = "github:xremap/nix-flake";
-    outputs = inputs@{ nixpkgs, ... }: {
-      nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-        modules = [
-          inputs.xremap-flake.nixosModules.default
-          /* This is effectively an inline module */
-          (
-            { pkgs, ... }:
-            {
-              users.users.root.password = "hunter2";
-              users.users.alice = {
-                password = "hunter2";
-                isNormalUser = true;
-                extraGroups = [ "wheel" ];
-              };
-  
-              system.stateVersion = "24.05";
-  
-              services.xserver = {
-                enable = true;
-                desktopManager.xfce.enable = true; # xfce is just an example
-              };
-              environment.systemPackages = [ pkgs.kitty ];
-  
-              /* Run a single one-shot service that allows root's services to access user's X session */
-              systemd.user.services.set-xhost = {
-                description = "Run a one-shot command upon user login";
-                path = [ pkgs.xorg.xhost ];
-                wantedBy = [ "default.target" ];
-                script = "xhost +SI:localuser:root";
-                environment.DISPLAY = ":0.0"; # NOTE: This is hardcoded for this flake
-              };
-  
-              /* Enable X11 feature support */
-              services.xremap.withX11 = true;
-              # Modmap for single key rebinds
-              services.xremap.config.modmap = [
-                {
-                  name = "Global";
-                  remap = { "CapsLock" = "Esc"; }; # globally remap CapsLock to Esc
-                }
-              ];
-  
-              # Keymap for key combo rebinds
-              services.xremap.config.keymap = [
-                {
-                  name = "Example ctrl-u > pageup rebind, only for specific application";
-                  remap = { "C-u" = "PAGEUP"; };
-                  application.only = [ "kitty" ];
-                }
-              ];
-            }
-          )
-        ];
-      };
-    };
-  }
-  ```
 </details>
 
 ## Non-NixOS and home-manager
 
-Since on non-NixOS configurations, the environment outside the user cannot be controlled (e.g. home-manager cannot add the user to `uinput`), additional steps may be needed. See [upstream](https://github.com/k0kubun/xremap) for more information.
+Since on non-NixOS configurations, the environment outside the user cannot be
+controlled (e.g. home-manager cannot add the user to `uinput`), additional steps
+may be needed. See [upstream](https://github.com/k0kubun/xremap) for more
+information.
 
-TODO
 
 <details>
   <summary>
 
-  ## Example configuration
-  </summary>
+## Example configuration
 
-  ```nix
-  {
-    description = "Home-manager flake for xremap";
+</summary>
 
-    inputs = {
-      nixpkgs.url = "nixpkgs/nixos-24.11";
+```nix
+{
+  description = "Home-manager flake for xremap";
 
-      home-manager.url = "github:nix-community/home-manager/release-24.11";
-      home-manager.inputs.nixpkgs.follows = "nixpkgs";
+  inputs = {
+    nixpkgs.url = "nixpkgs/nixos-24.11";
 
-      xremap-flake.url = "github:xremap/nix-flake";
-    };
+    home-manager.url = "github:nix-community/home-manager/release-24.11";
+    home-manager.inputs.nixpkgs.follows = "nixpkgs";
 
-    outputs = inputs@{ self, nixpkgs, home-manager, ... }:
-      let
-        lib = nixpkgs.lib;
-        system = "x86_64-linux";
-        pkgs = nixpkgs.legacyPackages.${system};
-      in {
-        ...
-        homeConfigurations = {
-          user = home-manager.lib.homeManagerConfiguration {
-            inherit pkgs;
-            modules = [
-              inputs.xremap-flake.homeManagerModules.default
-              {
-                services.xremap = {
-                  # Modmap for single key rebinds
-                  config.modmap = [{
-                    name = "Global";
-                    remap = { "CapsLock" = "Esc"; };
-                  }];
+    xremap-flake.url = "github:xremap/nix-flake";
+  };
 
-                  # Keymap for key combo rebinds
-                  config.keymap = [{
-                    name = "Example ctrl-u > pageup rebind";
-                    remap = { "C-u" = "PAGEUP"; };
-                  }];
-                };
-              }
-            ];
-          };
+  outputs = inputs@{ self, nixpkgs, home-manager, ... }:
+    let
+      lib = nixpkgs.lib;
+      system = "x86_64-linux";
+      pkgs = nixpkgs.legacyPackages.${system};
+    in {
+      ...
+      homeConfigurations = {
+        user = home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          modules = [
+            inputs.xremap-flake.homeManagerModules.default
+            {
+              services.xremap = {
+                enable = true;
+                # Modmap for single key rebinds
+                config.modmap = [{
+                  name = "Global";
+                  remap = { "CapsLock" = "Esc"; };
+                }];
+
+                # Keymap for key combo rebinds
+                config.keymap = [{
+                  name = "Example ctrl-u > pageup rebind";
+                  remap = { "C-u" = "PAGEUP"; };
+                }];
+              };
+            }
+          ];
         };
       };
-  }
-  ```
+    };
+}
+```
+
 </details>
 
 # Xremap service configuration
 
 There are three categories of options:
 
-1. `enabled` option; true by default for mostly historic reasons.
-2. Options that enable package features (support for X/Wayland) or service configuration.
+1. `enable` option; `false` by default. Set it to `true` to enable the service.
+2. Options that enable package features (support for X/Wayland) or service
+   configuration.
 
-    Feature flags are:
+   Feature flags are:
 
-    * `withWlroots`, `bool` – whether to enable wlroots-based compositor support (Sway, Hyprland, etc.)
-    * `withGnome`, `bool` – whether to enable Gnome support
-    * `withX11`, `bool` – whether to enable X11 support
-    * `withKDE`, `bool` – whether to enable KDE wayland support
-    * `withHypr`, `bool` – whether to enable non-wlroots based Hyprland support
-    * `withNiri`, `bool` – whether to enable Niri support
+   - `withWlroots`, `bool` – whether to enable wlroots-based compositor support
+     (Sway, Hyprland, etc.)
+   - `withGnome`, `bool` – whether to enable Gnome support
+   - `withX11`, `bool` – whether to enable X11 support
+   - `withKDE`, `bool` – whether to enable KDE wayland support
+   - `withHypr`, `bool` – whether to enable non-wlroots based Hyprland support
+   - `withNiri`, `bool` – whether to enable Niri support
+   - `withCosmic`, `bool` – whether to enable Cosmic support
 
-    All of them are false by default, which means no application-specific remaps work as xremap does not know which application is being used.
+   All of them are false by default, which means no application-specific remaps
+   work as xremap does not know which application is being used.
 
-    * `serviceMode`, `str` – whether to run as user ("`user`") or system ("`system`", default)
-    * `userName`, `str` – Name of user logging into graphical session (not set by default)
-    * `userId`, `int` – user under which IPC socket runs (1000 by default)
-    * `watch`, `bool` – whether to watch for new devices (false by default)
-    * `mouse`, `bool` – whether to watch for mice (false by default)
-    * `deviceNames`, `list of str`, – list of devices to monitor (empty by default)
-    * `extraArgs`, `list of str`, – list of arguments to provide for xremap (empty by default)
-    * `package` – which package for xremap to use. Useful if you want to somehow override the flake-provided package.
-    * `debug` – enables debug logging for xremap (off by default)
+   - `serviceMode`, `str` – whether to run as user ("`user`") or system
+     ("`system`", default)
+   - `userName`, `str` – Name of user logging into graphical session (not set by
+     default)
+   - `userId`, `int` – user under which IPC socket runs (1000 by default)
+   - `watch`, `bool` – whether to watch for new devices (false by default)
+   - `mouse`, `bool` – whether to watch for mice (false by default)
+   - `deviceNames`, `list of str`, – list of devices to monitor (empty by
+     default)
+   - `extraArgs`, `list of str`, – list of arguments to provide for xremap
+     (empty by default)
+   - `package` – which package for xremap to use. Useful if you want to somehow
+     override the flake-provided package.
+   - `debug` – enables debug logging for xremap (off by default)
 
-3. Options that define xremap's config. See [upstream](https://github.com/k0kubun/xremap) for more options.
+3. Options that define xremap's config. See
+   [upstream](https://github.com/k0kubun/xremap) for more options.
 
-    They are defined in either `services.xremap.config` as a Nix attrset or in `services.xremap.yamlConfig` as raw YAML text.
-
+   They are defined in either `services.xremap.config` as a Nix attrset or in
+   `services.xremap.yamlConfig` as raw YAML text.
 
 # Troubleshooting
 
@@ -302,15 +358,28 @@ Jan 01 19:30:46 nix xremap[595413]: [2024-01-01T16:30:46Z DEBUG xremap::action_d
 Jan 01 19:30:46 nix xremap[650912]: [2024-01-01T16:30:46Z ERROR xremap::action_dispatcher] Error running command: Os { code: 2, kind: NotFound, message: "No such file or directory" }
 ```
 
-This happens because of a discrepancy in `$PATH` variable between your environment and xremap service.
+This happens because of a discrepancy in `$PATH` variable between your
+environment and xremap service.
 
-Two approaches to solve this:
+Three approaches to solve this:
+
 1. Use binds to something like `${lib.getExe pkgs.pavucontrol}`
-2. (not applicable to all DEs) use the bind to call DE-specific utility, e.g. `hyprctl exec <binary>`. This way whatever UI customizations are present on the DE level will get propagated to launched binary.
+2. (not applicable to all DEs) use the bind to call DE-specific utility, e.g.
+   `hyprctl exec <binary>`. This way whatever UI customizations are present on
+   the DE level will get propagated to launched binary.
+3. Add the relevant path to the xremap service. For example, if `which pavucontrol`
+   returns `/run/current-system/sw/bin/pavucontrol` add
+   `systemd.services.xremap.path = [ "/run/current-system/sw" ];` (or
+   `systemd.user.services.xremap.path = [ "/run/current-system/sw" ];` if `serviceMode = user`)
+    **without `/bin`** to your config. This approach also works for non-NixOS
+    systems where you may have binaries in arbitrary locations. The downside is
+    that if the binary were to disappear from the path, trying to launch it
+    would fail.
 
 ## (specific to X11) xremap starts but app-specific shortcuts are not working
 
-If you are using X11 and have enabled `withX11`, but the application-specific keybinds do not work, check the logs (`journalctl -u xremap`).
+If you are using X11 and have enabled `withX11`, but the application-specific
+keybinds do not work, check the logs (`journalctl -u xremap`).
 
 Should the logs contain:
 
@@ -318,15 +387,21 @@ Should the logs contain:
 Failed to connect to X11: X11 setup failed: 'Authorization required, but no authorization protocol specified
 ```
 
-You would need to run `xhost +SI:localuser:root`. One approach to do this is described in [this example config](#systemwide-example-with-x-feature-for-application-specific-remaps).
+You would need to run `xhost +SI:localuser:root`. One approach to do this is
+described in
+[this example config](#systemwide-example-with-x-feature-for-application-specific-remaps).
 
 ## Xremap service is not started automatically
 
-Happens if `serviceMode == "user"` or when using home-manager module; typically because `graphical-session.target` is not launched automatically.
+Happens if `serviceMode == "user"` or when using home-manager module; typically
+because `graphical-session.target` is not launched automatically.
 
-If you are using a desktop environment (Gnome, KDE, something wlroots-based, etc.) – make sure that the target is started.
+If you are using a desktop environment (Gnome, KDE, something wlroots-based,
+etc.) – make sure that the target is started.
 
-If you intend to use xremap without a DE, change `systemd.user.services.xremap.wantedBy` to some target that starts after you log in or manually start `systemctl --user start xremap`
+If you intend to use xremap without a DE, change
+`systemd.user.services.xremap.wantedBy` to some target that starts after you log
+in or manually start `systemctl --user start xremap`
 
 ## Xremap does not restart on config change
 
@@ -334,4 +409,5 @@ Not (yet?) implemented, see #49.
 
 ## Something else
 
-Feel free to submit an [issue](https://github.com/xremap/nix-flake/issues) or reach out to the main contributor of the repo via any other means.
+Feel free to submit an [issue](https://github.com/xremap/nix-flake/issues) or
+reach out to the main contributor of the repo via any other means.

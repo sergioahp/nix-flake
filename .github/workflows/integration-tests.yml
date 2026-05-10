@@ -1,13 +1,11 @@
-name: "Build all packages using Nix"
+name: Run integration tests (on demand)
+
 on:
-  push:
-    paths:
-      # Run the workflow <=> when relevant files are changed
-      - 'flake.nix'
-      - 'overlay/**.nix'
+  workflow_dispatch:
+
 jobs:
-  nix-checks:
-    runs-on: ubuntu-latest
+  check:
+    runs-on: ubuntu-22.04
     permissions:
       contents: read
       id-token: write
@@ -16,4 +14,4 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Formatting check
-        run: nix develop .dev#ci --command build-all-features
+        run: nix develop .dev#ci --command run-integration-tests

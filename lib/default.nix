@@ -22,9 +22,19 @@ in
     withWlroots = mkEnableOption "support for wlroots-based compositors (Sway, old Hyprland, etc.)";
     withKDE = mkEnableOption "support KDE-Plasma Wayland";
     withNiri = mkEnableOption "support Niri";
+    withCosmic = mkEnableOption "support Cosmic";
     enable = mkOption {
       type = types.bool;
-      default = true;
+      #  This warning should be emitted <=> default value is used.
+      default = lib.warn ''
+        xremap module is imported but services.xremap.enable is false. As of a flake commit 1448d83, it is false by default.
+
+        This warning is emitted when the module default value (false) is used.
+
+        If you want to enable xremap, set `services.xremap.enable` to `true` in your config.
+
+        If you want to keep the module import but disable the service and suppress the warning, set `services.xremap.enable` to `false`.
+      '' false;
       description = "Enable xremap service";
     };
     package = mkOption {
@@ -53,6 +63,7 @@ in
                   withWlroots
                   withKDE
                   withNiri
+                  withCosmic
                   ;
               }
             ) <= 1
@@ -73,6 +84,8 @@ in
           selfPkgs'.xremap-kde
         else if cfg.withNiri then
           selfPkgs'.xremap-niri
+        else if cfg.withCosmic then
+          selfPkgs'.xremap-cosmic
         else
           selfPkgs'.xremap;
     };

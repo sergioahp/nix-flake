@@ -1,26 +1,31 @@
 /**
-  Effectively only checks that the deviceName (singular) parameter can still be used.
+  Effectively only checks that the `deviceName` (singular) parameter can still be used.
 
-  Starts the VM and checks the ExecStart value of the systemd unit.
+  Starts the VM and checks the `ExecStart` value of the Systemd unit.
 */
 { self, ... }:
-{
+{ testers }:
+testers.runNixOSTest {
   name = "xremap-single-device";
   nodes.machine1 =
-    { config, ... }:
+    { ... }:
     {
       services.getty.autologinUser = "root";
       imports = [
         self.nixosModules.default
+        ../common/no-network-in-tests.nix
         {
-          services.xremap.config.keymap = [
-            {
-              name = "Other remap";
-              remap = {
-                "z" = "q";
-              };
-            }
-          ];
+          services.xremap = {
+            enable = true;
+            config.keymap = [
+              {
+                name = "Other remap";
+                remap = {
+                  "z" = "q";
+                };
+              }
+            ];
+          };
         }
         { services.xremap.deviceName = "event0"; }
       ];
